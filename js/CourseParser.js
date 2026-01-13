@@ -1,7 +1,8 @@
 // CourseParser.js - Handles parsing of course catalogs
 class CourseParser {
   static parseTime(timeStr) {
-    const dayPattern = /[MTWRF]+/;
+    // Handle formats like "MW9.30-11", "TR3-4.30", "F9-11", "MWF1"
+    const dayPattern = /^[MTWRF]+/;
     const timePattern = /(\d{1,2})(?:\.(\d{2}))?(?:-(\d{1,2})(?:\.(\d{2}))?)?/;
     
     const dayMatch = timeStr.match(dayPattern);
@@ -9,7 +10,7 @@ class CourseParser {
     
     if (!dayMatch || !timeMatch) return null;
     
-    const days = dayMatch[0].split('').map(d => d === 'R' ? 'R' : d);
+    const days = dayMatch[0].split('');
     const startHour = parseInt(timeMatch[1]);
     const startMin = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
     const endHour = timeMatch[3] ? parseInt(timeMatch[3]) : startHour + 1;
@@ -29,47 +30,62 @@ class CourseParser {
     
     let i = 0;
     while (i < lines.length) {
-      const line = lines[i];
-      const courseCodeMatch = line.match(/^(\d+\.\w+)/);
+      const line = lines[i].trim();
+      
+      // Match course codes like "1.00", "18.05", "6.S056", "1.010A"
+      const courseCodeMatch = line.match(/^(\d+\.\w+(?:\.\w+)?)/);
       
       if (courseCodeMatch) {
         const courseCode = courseCodeMatch[1];
         const courseName = line.substring(courseCode.length).trim();
         
+        // Look ahead to check for "Not offered regularly; consult department"
         let isConsultDept = false;
         let fullText = '';
-        for (let j = i; j < Math.min(i + 15, lines.length); j++) {
-          fullText += lines[j] + '\n';
-          if (lines[j].includes('Not offered regularly; consult department')) {
+        let meetingTimes = [];
+        
+        // Scan the next 20 lines for info about this course
+        for (let j = i; j < Math.min(i + 20, lines.length); j++) {
+          const currentLine = lines[j];
+          fullText += currentLine + '\n';
+          
+          // Check for "consult department"
+          if (currentLine.includes('Not offered regularly; consult department') ||
+              currentLine.includes('consult department')) {
             isConsultDept = true;
+          }
+          
+          // Look for lecture times: "Lecture: MW9.30-11 (1-390)"
+          if (currentLine.includes('Lecture:') || currentLine.includes('**Lecture:**')) {
+            // Extract time patterns like "MW9.30-11", "TR3-4.30", "F9-11"
+            const timeMatches = currentLine.matchAll(/([MTWRF]+\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)/g);
+            for (const match of timeMatches) {
+              const parsed = CourseParser.parseTime(match[1]);
+              if (parsed) {
+                meetingTimes.push(parsed);
+              }
+            }
+          }
+          
+          // Stop when we hit the next course
+          if (j > i && lines[j].match(/^\d+\.\w+/)) {
+            break;
           }
         }
         
         if (isConsultDept) {
-          consultDept.push({ code: courseCode, name: courseName, fullText });
-          i++;
-          continue;
-        }
-        
-        let meetingTimes = [];
-        for (let j = i; j < Math.min(i + 10, lines.length); j++) {
-          const timeLine = lines[j];
-          if (timeLine.includes('Lecture:')) {
-            const matches = timeLine.matchAll(/([MTWRF]+[\d\.\-:]+)/g);
-            for (const match of matches) {
-              const parsed = CourseParser.parseTime(match[1]);
-              if (parsed) meetingTimes.push(parsed);
-            }
-          }
-        }
-        
-        if (meetingTimes.length > 0) {
+          consultDept.push({ 
+            code: courseCode, 
+            name: courseName, 
+            fullText: fullText.trim() 
+          });
+        } else if (meetingTimes.length > 0) {
           courses.push({
             code: courseCode,
             name: courseName,
             meetingTimes: meetingTimes,
             source: 'MIT',
-            fullText: fullText
+            fullText: fullText.trim()
           });
         }
       }
@@ -81,27 +97,68 @@ class CourseParser {
 
   static parseWellesleyCourse(courseText) {
     const courses = [];
+    const consultDept = [];
     const lines = courseText.split('\n');
     
-    for (let line of lines) {
-      if (line.trim().length > 0 && !line.includes('INPUT_WELLESLEY')) {
-        const match = line.match(/^([\w\s]+?)\s+([MTWRF]+)\s+(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/);
-        if (match) {
-          courses.push({
-            code: '',
-            name: match[1].trim(),
-            meetingTimes: [{
-              days: match[2].split(''),
-              startTime: match[3],
-              endTime: match[4]
-            }],
-            source: 'Wellesley',
-            fullText: line
-          });
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || line.includes('INPUT_WELLESLEY')) continue;
+      
+      // Parse format: "AFR 205 - 01 MR - 9:55 AM - 11:10 AM; ..."
+      const match = line.match(/^([A-Z]+\s+\d+)\s+-\s+\d+\s+([MTWRF]+)\s+-\s+(\d{1,2}:\d{2}\s+[AP]M)\s+-\s+(\d{1,2}:\d{2}\s+[AP]M);/);
+      
+      if (match) {
+        const courseCode = match[1];
+        const days = match[2];
+        const startTime = match[3];
+        const endTime = match[4];
+        
+        // Extract course name from next line
+        let courseName = '';
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          const nameMatch = nextLine.match(/^(.+?)(?:\s+[A-Z\s]+)?$/);
+          if (nameMatch) {
+            courseName = nameMatch[1].trim();
+          }
+        }
+        
+        // Convert 12-hour to 24-hour format
+        const convertTo24 = (time12h) => {
+          const [time, period] = time12h.split(' ');
+          let [hours, minutes] = time.split(':').map(Number);
+          
+          if (period === 'PM' && hours !== 12) hours += 12;
+          if (period === 'AM' && hours === 12) hours = 0;
+          
+          return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        };
+        
+        const parsedDays = days.split('');
+        
+        const isConsultDept = line.toLowerCase().includes('consult department') || 
+                             line.toLowerCase().includes('not offered regularly');
+        
+        const courseData = {
+          code: courseCode,
+          name: courseName || courseCode,
+          meetingTimes: [{
+            days: parsedDays,
+            startTime: convertTo24(startTime),
+            endTime: convertTo24(endTime)
+          }],
+          source: 'Wellesley',
+          fullText: line + (courseName ? '\n' + courseName : '')
+        };
+        
+        if (isConsultDept) {
+          consultDept.push(courseData);
+        } else {
+          courses.push(courseData);
         }
       }
     }
     
-    return { courses, consultDept: [] };
+    return { courses, consultDept };
   }
 }
