@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Schedule Finder</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Load data files - all semesters -->
+    <script src="data/semesters/2026-spring/mitCatalog.js"></script>
+    <script src="data/semesters/2026-spring/wellesleyCatalog.js"></script>
+    <script src="data/semesters/2026-fall/mitCatalog.js"></script>
+    <script src="data/semesters/2026-fall/wellesleyCatalog.js"></script>
+    <script src="data/busSchedule.js"></script>
+    <script src="data/semesterConfig.js"></script>
+    
+    <!-- Load utility classes -->
+    <script src="js/CourseParser.js"></script>
+    <script src="js/ScheduleManager.js"></script>
+    <script src="js/BusScheduleHelper.js"></script>
+    
+    <!-- Load React components -->
+    <script type="text/babel" src="components/SemesterSelector.jsx"></script>
+    <script type="text/babel" src="components/ScheduleTable.jsx"></script>
+    <script type="text/babel" src="components/CourseForm.jsx"></script>
+    <script type="text/babel" src="components/SearchPanel.jsx"></script>
+    <script type="text/babel" src="components/ResultsList.jsx"></script>
+    <script type="text/babel" src="components/ConsultDeptSection.jsx"></script>
+    
+    <!-- Main App -->
+    <script type="text/babel" src="App.jsx"></script>
+</body>
+</html>
