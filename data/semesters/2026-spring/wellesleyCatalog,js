@@ -1,0 +1,9 @@
+// Wellesley Spring 2026 Course Catalog
+const WELLESLEY_CATALOG_2026_SPRING = `
+INPUT_WELLESLEY_SPRING_2026_CATALOG_HERE
+
+Example format:
+ECON 101 Introduction to Economics MWF 10:00-11:00
+HIST 201 American History TR 14:00-15:30
+BIOL 150 Cell Biology MWF 09:00-10:30
+`.trim();
