@@ -69,5 +69,9 @@ def main():
     except Exception as error:mit=existing.get("mit",[]);print(f"MIT refresh unavailable; keeping {len(mit)} verified subjects: {error}")
     if not wellesley or not mit:raise RuntimeError("No usable catalog data; refusing to replace the existing catalog")
     payload={"meta":{"term":term,"updated":datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),"sources":{"wellesley":WELLESLEY_URL,"mit":MIT_URL}},"wellesley":wellesley,"mit":mit}
-    (ROOT/"data"/"catalogs.js").write_text("window.CATALOG_DATA="+json.dumps(payload,separators=(",",":"),ensure_ascii=False)+";\n",encoding="utf-8");print(f"Wrote {len(wellesley)} Wellesley sections and {len(mit)} MIT subjects for {term}.")
+    target=ROOT/"data"; (target/"catalog-meta.js").write_text("window.CATALOG_META="+json.dumps(payload["meta"],separators=(",",":"),ensure_ascii=False)+";\n",encoding="utf-8")
+    (target/"wellesley.js").write_text("window.WELLESLEY_COURSES="+json.dumps(wellesley,separators=(",",":"),ensure_ascii=False)+";\n",encoding="utf-8")
+    for old in target.glob("mit-*.js"):old.unlink()
+    for index,start in enumerate(range(0,len(mit),350),1):(target/f"mit-{index}.js").write_text("window.MIT_COURSE_PARTS=window.MIT_COURSE_PARTS||[];window.MIT_COURSE_PARTS.push("+json.dumps(mit[start:start+350],separators=(",",":"),ensure_ascii=False)+");\n",encoding="utf-8")
+    print(f"Wrote {len(wellesley)} Wellesley sections and {len(mit)} MIT subjects for {term}.")
 if __name__=="__main__":main()

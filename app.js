@@ -1,5 +1,5 @@
 (() => {
-  const data = window.CATALOG_DATA || {wellesley:[], mit:[], meta:{}};
+  const data = window.CATALOG_DATA || {wellesley:window.WELLESLEY_COURSES||[], mit:(window.MIT_COURSE_PARTS||[]).flat(), meta:window.CATALOG_META||{}};
   const $ = id => document.getElementById(id);
   const saved = JSON.parse(localStorage.getItem("crossreg-schedule-v2") || "[]");
   const state = {schedule:saved, matches:[], visible:20};
