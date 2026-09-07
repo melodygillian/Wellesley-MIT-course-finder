@@ -62,7 +62,16 @@ def get_wellesley(raw=None):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument("--mit-file",type=Path);parser.add_argument("--wellesley-file",type=Path);args=parser.parse_args()
     wellesley_raw=args.wellesley_file.read_bytes() if args.wellesley_file else None;mit_raw=args.mit_file.read_bytes() if args.mit_file else None
-    existing_path=ROOT/"data"/"catalogs.js";existing=json.loads(existing_path.read_text(encoding="utf-8")[len("window.CATALOG_DATA="):-2]) if existing_path.exists() else {"meta":{},"wellesley":[],"mit":[]}
+    existing_path=ROOT/"data"/"catalogs.js"
+    if existing_path.exists():existing=json.loads(existing_path.read_text(encoding="utf-8")[len("window.CATALOG_DATA="):-2])
+    else:
+        target=ROOT/"data";meta_file=target/"catalog-meta.js";well_file=target/"wellesley.js"
+        meta=json.loads(meta_file.read_text(encoding="utf-8")[len("window.CATALOG_META="):-2]) if meta_file.exists() else {}
+        wellesley_existing=json.loads(well_file.read_text(encoding="utf-8")[len("window.WELLESLEY_COURSES="):-2]) if well_file.exists() else []
+        mit_existing=[]
+        for part in sorted(target.glob("mit-*.js")):
+            raw=part.read_text(encoding="utf-8");mit_existing.extend(json.loads(raw[raw.index("push(")+5:-3]))
+        existing={"meta":meta,"wellesley":wellesley_existing,"mit":mit_existing}
     try:term,wellesley=get_wellesley(wellesley_raw)
     except Exception as error:term,wellesley=existing.get("meta",{}).get("term","Current term"),existing.get("wellesley",[]);print(f"Wellesley refresh unavailable; keeping {len(wellesley)} verified sections: {error}")
     try:mit=get_mit(mit_raw)
