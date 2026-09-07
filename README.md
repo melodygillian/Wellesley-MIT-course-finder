@@ -1,93 +1,24 @@
-# Wellesley-MIT-course-finder
-Website designed for student to browse for a course to fit in the existing schedule from both MIT and Wellesley catalog, options suggested with the shuttle schedule assuming student is leaving from Wellesley to MIT.
+# CrossReg — Wellesley × MIT Course Matcher
 
-# Course Schedule Finder
+CrossReg helps Wellesley students find MIT subjects that fit their current class schedule and the weekday Exchange Bus timetable.
 
-A web application to help MIT and Wellesley students find compatible courses across multiple semesters.
+## What it does
 
-## Features
+1. Students search the current Wellesley catalog by course code, title, or instructor and add sections to a weekly calendar.
+2. Personal time blocks can reserve labs, practices, work, or any other busy period.
+3. The matcher removes MIT subjects whose required meeting groups conflict with the complete calendar.
+4. Results show compatible lecture, recitation, and lab options and a suggested Exchange Bus trip.
+5. Students can add a compatible MIT course to the calendar and remove any Wellesley course, MIT course, or time block with one click.
+6. Search and level filters narrow the results. The entire schedule is saved in the browser.
 
-- **Multi-Semester Support**: Easily switch between Spring, Fall, and future semesters
-- **Visual Schedule Grid**: See your weekly schedule at a glance
-- **Conflict Detection**: Automatically detects time conflicts with buffer periods
-- **Cross-Campus Support**: Handles MIT and Wellesley courses
-- **Bus Schedule Integration**: Recommends shuttle times for cross-campus courses
-- **Department Consultation Alerts**: Identifies courses requiring schedule consultation
+The generated catalog contains the complete set of scheduled courses exposed by the two upstream sources. Wellesley sections without a published meeting time and MIT subjects marked TBA are omitted because compatibility cannot be determined.
 
-## Setup
+## Automatic catalog updates
 
-1. Clone this repository
-2. Update catalog data in `data/semesters/` for each semester
-3. Open `index.html` in a web browser
-4. No build process required - runs directly in the browser
+`scripts/update_catalogs.py` downloads current Wellesley sections from the [Wellesley Course Browser](https://courses.wellesley.edu/) and MIT subject data from the [FireRoad catalog API](https://fireroad.mit.edu/reference/catalog). It generates `data/catalogs.js`, which is checked into the repository so the static site stays fast and available.
 
-## Adding New Semesters
+The GitHub Actions workflow refreshes that data every weekday and can also be run manually from the Actions tab. When Wellesley switches terms, the displayed term changes automatically. Review `data/shuttle.js` against the official [Exchange Bus schedule](https://www.wellesley.edu/about-us/offices-departments/transportation/shuttle-bus-schedule) at the start of each term.
 
-### 1. Create Catalog Files
+## Run locally
 
-Create a new folder in `data/semesters/` (e.g., `2027-spring/`) with:
-- `mitCatalog.js` - Define `MIT_CATALOG_2027_SPRING`
-- `wellesleyCatalog.js` - Define `WELLESLEY_CATALOG_2027_SPRING`
-
-### 2. Update Configuration
-
-Add the new semester to `data/semesterConfig.js`:
-```javascript
-{
-  id: '2027-spring',
-  label: 'Spring 2027',
-  mitCatalog: 'MIT_CATALOG_2027_SPRING',
-  wellesleyCatalog: 'WELLESLEY_CATALOG_2027_SPRING'
-}
-```
-
-### 3. Load in HTML
-
-Add script tags in `index.html`:
-```html
-<script src="data/semesters/2027-spring/mitCatalog.js"></script>
-<script src="data/semesters/2027-spring/wellesleyCatalog.js"></script>
-```
-
-That's it! The new semester will appear in the dropdown automatically.
-
-## File Structure
-```
-course-schedule-finder/
-├── index.html
-├── App.jsx
-├── README.md
-├── data/
-│   ├── semesterConfig.js              # Semester configuration
-│   ├── busSchedule.js                 # Bus schedule
-│   └── semesters/
-│       ├── 2025-fall/
-│       │   ├── mitCatalog.js
-│       │   └── wellesleyCatalog.js
-│       └── 2026-fall/
-│           ├── mitCatalog.js
-│           └── wellesleyCatalog.js
-├── js/
-│   ├── CourseParser.js
-│   ├── ScheduleManager.js
-│   └── BusScheduleHelper.js
-└── components/
-    ├── SemesterSelector.jsx
-    ├── ScheduleTable.jsx
-    ├── CourseForm.jsx
-    ├── SearchPanel.jsx
-    ├── ResultsList.jsx
-    └── ConsultDeptSection.jsx
-```
-
-## Usage
-
-1. **Select Semester**: Choose the term from the dropdown at the top
-2. **Add Your Current Courses**: Enter course details
-3. **View Your Schedule**: See courses in a weekly grid
-4. **Search for Compatible Courses**: Choose MIT, Wellesley, or both
-5. **Review Results**: See compatible courses with bus schedules
-
-## License
-
-MIT License
+Open `index.html`, or serve the folder with any static web server. No build step or package installation is required.
