@@ -54,10 +54,11 @@ def get_wellesley(raw=None):
     for block in re.findall(r'<div class="w-clearfix courseitem">(.*?)(?=<div class="w-clearfix courseitem">|</body>)',page,re.S):
         head=re.search(r'id=bgrnd_\d+>\s*(.*?)\s*<span class="professorname">(.*?)</span>',block,re.S);detail=re.search(r'class="coursename_small"><p>(.*?)</p><span class="professorname">(.*?)</span>',block,re.S);crn=re.search(r"displayCourse\('([^']+)'",block)
         if not head or not detail:continue
-        code=clean(head[1]);info=clean(head[2]);title=clean(detail[1]);instructor=clean(detail[2]);meeting=re.match(r"([MTWRF]+)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)",info,re.I)
-        if not meeting:continue
-        start,end=to_24(meeting[2]),to_24(meeting[3])
-        if start and end:courses.append({"id":(crn[1] if crn else code).replace('"',''),"code":code,"title":title,"instructor":instructor,"meetings":[{"days":list(meeting[1]),"start":start,"end":end}]})
+        code=clean(head[1]);info=clean(head[2]);title=clean(detail[1]);instructor=clean(detail[2]);meetings=[]
+        for meeting in re.finditer(r"(?:^|;)\s*([MTWRF]+)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)",info,re.I):
+            start,end=to_24(meeting[2]),to_24(meeting[3])
+            if start and end:meetings.append({"days":list(meeting[1].upper()),"start":start,"end":end})
+        if meetings:courses.append({"id":(crn[1] if crn else code).replace('"',''),"code":code,"title":title,"instructor":instructor,"meetings":meetings})
     return (clean(term_match[1]) if term_match else "Current term"),courses
 def main():
     parser=argparse.ArgumentParser();parser.add_argument("--mit-file",type=Path);parser.add_argument("--wellesley-file",type=Path);args=parser.parse_args()
