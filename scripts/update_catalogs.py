@@ -62,6 +62,12 @@ def get_wellesley(raw=None):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument("--mit-file",type=Path);parser.add_argument("--wellesley-file",type=Path);args=parser.parse_args()
     wellesley_raw=args.wellesley_file.read_bytes() if args.wellesley_file else None;mit_raw=args.mit_file.read_bytes() if args.mit_file else None
-    term,wellesley=get_wellesley(wellesley_raw);mit=get_mit(mit_raw);payload={"meta":{"term":term,"updated":datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),"sources":{"wellesley":WELLESLEY_URL,"mit":MIT_URL}},"wellesley":wellesley,"mit":mit}
+    existing_path=ROOT/"data"/"catalogs.js";existing=json.loads(existing_path.read_text(encoding="utf-8")[len("window.CATALOG_DATA="):-2]) if existing_path.exists() else {"meta":{},"wellesley":[],"mit":[]}
+    try:term,wellesley=get_wellesley(wellesley_raw)
+    except Exception as error:term,wellesley=existing.get("meta",{}).get("term","Current term"),existing.get("wellesley",[]);print(f"Wellesley refresh unavailable; keeping {len(wellesley)} verified sections: {error}")
+    try:mit=get_mit(mit_raw)
+    except Exception as error:mit=existing.get("mit",[]);print(f"MIT refresh unavailable; keeping {len(mit)} verified subjects: {error}")
+    if not wellesley or not mit:raise RuntimeError("No usable catalog data; refusing to replace the existing catalog")
+    payload={"meta":{"term":term,"updated":datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),"sources":{"wellesley":WELLESLEY_URL,"mit":MIT_URL}},"wellesley":wellesley,"mit":mit}
     (ROOT/"data"/"catalogs.js").write_text("window.CATALOG_DATA="+json.dumps(payload,separators=(",",":"),ensure_ascii=False)+";\n",encoding="utf-8");print(f"Wrote {len(wellesley)} Wellesley sections and {len(mit)} MIT subjects for {term}.")
 if __name__=="__main__":main()
