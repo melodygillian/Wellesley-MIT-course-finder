@@ -9,13 +9,14 @@ CrossReg helps Wellesley students find MIT subjects that fit their current class
 3. The matcher removes MIT subjects whose required meeting groups conflict with the complete calendar.
 4. Results show compatible lecture, recitation, and lab options and a suggested Exchange Bus trip.
 5. Students can add a compatible MIT course to the calendar and remove any Wellesley course, MIT course, or time block with one click.
-6. Search and level filters narrow the results. The entire schedule is saved in the browser.
+6. Search, level, and minimum student-rating filters narrow the results. Each result shows its FireRoad course-evaluation rating, estimated weekly workload, formal prerequisites, and any clearly worded recommended preparation.
+7. A short guide at the top explains the complete planning flow. The entire schedule is saved in the browser.
 
 The generated catalog contains the complete set of scheduled courses exposed by the two upstream sources. Wellesley sections without a published meeting time and MIT subjects marked TBA are omitted because compatibility cannot be determined.
 
 ## Automatic catalog updates
 
-`scripts/update_catalogs.py` downloads current Wellesley sections from the [Wellesley Course Browser](https://courses.wellesley.edu/) and MIT subject data from the [FireRoad catalog API](https://fireroad.mit.edu/reference/catalog). It generates `data/catalogs.js`, which is checked into the repository so the static site stays fast and available.
+`scripts/update_catalogs.py` downloads current Wellesley sections from the [Wellesley Course Browser](https://courses.wellesley.edu/) and MIT subject data from the [FireRoad catalog API](https://fireroad.mit.edu/reference/catalog). Hydrant uses this same public FireRoad feed. The generated browser-ready files are checked into the repository so the static site stays fast and available.
 
 The GitHub Actions workflow refreshes that data every weekday and can also be run manually from the Actions tab. When Wellesley switches terms, the displayed term changes automatically. Review `data/shuttle.js` against the official [Exchange Bus schedule](https://www.wellesley.edu/about-us/offices-departments/transportation/shuttle-bus-schedule) at the start of each term.
 
