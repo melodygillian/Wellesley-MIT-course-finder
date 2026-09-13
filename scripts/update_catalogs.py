@@ -53,7 +53,8 @@ def get_mit(raw=None):
         if groups:
             description=row.get("description","")
             rating=number(row.get("rating"));hours_in=number(row.get("in_class_hours"));hours_out=number(row.get("out_of_class_hours"))
-            courses.append({"code":row["subject_id"],"title":row["title"],"level":row.get("level",""),"description":description,"groups":groups,"url":row.get("url") or "https://student.mit.edu/catalog/index.cgi","rating":round(rating,2) if rating else None,"hours":round(hours_in+hours_out,2) if hours_in or hours_out else None,"inClassHours":round(hours_in,2) if hours_in else None,"outOfClassHours":round(hours_out,2) if hours_out else None,"prerequisites":row.get("prerequisites") or "","corequisites":row.get("corequisites") or "","recommendedPreparation":recommended_preparation(description)})
+            terms=[term for term,offered in (("fall",row.get("offered_fall")),("spring",row.get("offered_spring"))) if offered]
+            courses.append({"code":row["subject_id"],"title":row["title"],"level":row.get("level",""),"description":description,"groups":groups,"url":row.get("url") or "https://student.mit.edu/catalog/index.cgi","terms":terms,"rating":round(rating,2) if rating else None,"hours":round(hours_in+hours_out,2) if hours_in or hours_out else None,"inClassHours":round(hours_in,2) if hours_in else None,"outOfClassHours":round(hours_out,2) if hours_out else None,"prerequisites":row.get("prerequisites") or "","corequisites":row.get("corequisites") or "","recommendedPreparation":recommended_preparation(description)})
     return courses
 def clean(value):return re.sub(r"\s+"," ",unescape(re.sub(r"<[^>]+>","",value))).strip()
 def to_24(value):
