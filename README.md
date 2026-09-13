@@ -9,7 +9,7 @@ CrossReg helps Wellesley students find MIT subjects that fit their current class
 3. The matcher removes MIT subjects whose required meeting groups conflict with the complete calendar.
 4. Results show compatible lecture, recitation, and lab options and a suggested Exchange Bus trip.
 5. Students can add a compatible MIT course to the calendar and remove any Wellesley course, MIT course, or time block with one click.
-6. Search, level, and minimum student-rating filters narrow the results. Each result shows its FireRoad course-evaluation rating, estimated weekly workload, formal prerequisites, and any clearly worded recommended preparation.
+6. Search, level, and minimum student-rating filters narrow the results. Each result shows its FireRoad course-evaluation rating, estimated weekly workload, formal prerequisites, any clearly worded recommended preparation, and 🍂 Fall / 🌸 Spring offering badges.
 7. A short guide at the top explains the complete planning flow. The entire schedule is saved in the browser.
 
 The generated catalog contains the complete set of scheduled courses exposed by the two upstream sources. Wellesley sections without a published meeting time and MIT subjects marked TBA are omitted because compatibility cannot be determined.
