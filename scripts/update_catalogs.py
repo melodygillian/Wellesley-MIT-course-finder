@@ -37,12 +37,23 @@ def mit_groups(schedule):
             if option not in unique:unique.append(option)
         if unique:groups.append({"type":pieces[0],"options":unique})
     return groups
+def recommended_preparation(description):
+    """Keep clearly advisory preparation separate from formal prerequisites."""
+    sentences=re.split(r"(?<=[.!?])\s+",description or "")
+    signals=("recommended", "may be helpful", "helpful", "familiarity with", "experience with", "background in", "knowledge of")
+    return " ".join(sentence.strip() for sentence in sentences if any(signal in sentence.lower() for signal in signals))
+def number(value):
+    try:return float(value or 0)
+    except (TypeError,ValueError):return 0
 def get_mit(raw=None):
     courses=[]
     for row in json.loads(raw if raw is not None else fetch(MIT_URL)):
         if not row.get("offered_fall") or not row.get("schedule"):continue
         groups=mit_groups(row["schedule"])
-        if groups:courses.append({"code":row["subject_id"],"title":row["title"],"level":row.get("level",""),"description":row.get("description",""),"groups":groups,"url":row.get("url") or "https://student.mit.edu/catalog/index.cgi"})
+        if groups:
+            description=row.get("description","")
+            rating=number(row.get("rating"));hours_in=number(row.get("in_class_hours"));hours_out=number(row.get("out_of_class_hours"))
+            courses.append({"code":row["subject_id"],"title":row["title"],"level":row.get("level",""),"description":description,"groups":groups,"url":row.get("url") or "https://student.mit.edu/catalog/index.cgi","rating":round(rating,2) if rating else None,"hours":round(hours_in+hours_out,2) if hours_in or hours_out else None,"inClassHours":round(hours_in,2) if hours_in else None,"outOfClassHours":round(hours_out,2) if hours_out else None,"prerequisites":row.get("prerequisites") or "","corequisites":row.get("corequisites") or "","recommendedPreparation":recommended_preparation(description)})
     return courses
 def clean(value):return re.sub(r"\s+"," ",unescape(re.sub(r"<[^>]+>","",value))).strip()
 def to_24(value):
