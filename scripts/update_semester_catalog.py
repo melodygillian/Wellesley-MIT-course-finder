@@ -18,6 +18,17 @@ ROOT = Path(__file__).resolve().parents[1]
 WELLESLEY_EXPORT_URL = "https://courses.wellesley.edu/export?semester={semester_code}"
 
 
+def load_existing(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    match = re.search(
+        r"window\.SEMESTER_CATALOGS\[[^\]]+\]=(.*);\s*$",
+        path.read_text(encoding="utf-8"),
+        re.S,
+    )
+    return json.loads(match.group(1)) if match else {}
+
+
 def parse_wellesley_csv(raw: bytes, semester_code: str) -> list[dict]:
     rows = csv.DictReader(io.StringIO(raw.decode("utf-8-sig", "replace")))
     courses = []
@@ -63,18 +74,30 @@ def main() -> None:
     parser.add_argument("--mit-file", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / "data" / "spring-2027.js")
     args = parser.parse_args()
+    existing = load_existing(args.output)
 
-    if args.wellesley_file:
-        wellesley_raw = args.wellesley_file.read_bytes()
-    else:
-        wellesley_raw = fetch(
-            WELLESLEY_EXPORT_URL.format(semester_code=args.semester_code),
-            insecure=True,
+    try:
+        if args.wellesley_file:
+            wellesley_raw = args.wellesley_file.read_bytes()
+        else:
+            wellesley_raw = fetch(
+                WELLESLEY_EXPORT_URL.format(semester_code=args.semester_code),
+                insecure=True,
+            )
+        wellesley = parse_wellesley_csv(wellesley_raw, args.semester_code)
+    except Exception as error:
+        wellesley = existing.get("wellesley", [])
+        print(
+            f"Wellesley refresh unavailable; keeping {len(wellesley)} verified sections: {error}"
         )
 
-    mit_raw = args.mit_file.read_bytes() if args.mit_file else fetch(MIT_URL, insecure=True)
-    wellesley = parse_wellesley_csv(wellesley_raw, args.semester_code)
-    mit = get_mit(mit_raw, args.mit_season)
+    try:
+        mit_raw = args.mit_file.read_bytes() if args.mit_file else fetch(MIT_URL, insecure=True)
+        mit = get_mit(mit_raw, args.mit_season)
+    except Exception as error:
+        mit = existing.get("mit", [])
+        print(f"MIT refresh unavailable; keeping {len(mit)} verified subjects: {error}")
+
     if not wellesley or not mit:
         raise RuntimeError("No usable catalog data; refusing to replace the semester catalog")
 
