@@ -58,6 +58,11 @@ def parse_wellesley_csv(raw: bytes, semester_code: str) -> list[dict]:
                 "code": course,
                 "title": row.get("Title", "").strip(),
                 "instructor": row.get("Instructor", "").strip(),
+                "distributions": [
+                    value.strip()
+                    for value in re.split(r"[;,]", row.get("Distribution(s)", ""))
+                    if value.strip()
+                ],
                 "meetings": meetings,
             }
         )
