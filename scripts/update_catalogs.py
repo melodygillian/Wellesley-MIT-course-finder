@@ -45,10 +45,10 @@ def recommended_preparation(description):
 def number(value):
     try:return float(value or 0)
     except (TypeError,ValueError):return 0
-def get_mit(raw=None):
+def get_mit(raw=None, season="fall"):
     courses=[]
     for row in json.loads(raw if raw is not None else fetch(MIT_URL)):
-        if not row.get("offered_fall") or not row.get("schedule"):continue
+        if not row.get(f"offered_{season}") or not row.get("schedule"):continue
         groups=mit_groups(row["schedule"])
         if groups:
             description=row.get("description","")

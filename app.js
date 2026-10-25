@@ -1,8 +1,21 @@
 (() => {
-  const data = window.CATALOG_DATA || {wellesley:window.WELLESLEY_COURSES||[], mit:(window.MIT_COURSE_PARTS||[]).flat(), meta:window.CATALOG_META||{}};
+  const legacyCatalog = window.CATALOG_DATA || {wellesley:window.WELLESLEY_COURSES||[], mit:(window.MIT_COURSE_PARTS||[]).flat(), meta:window.CATALOG_META||{}};
+  const catalogs = window.SEMESTER_CATALOGS || {};
+  const semesterConfig = window.SEMESTER_CONFIG || {default:"current",available:[{id:"current",label:legacyCatalog.meta.term||"Current term"}]};
+  if (!catalogs.current) catalogs.current = legacyCatalog;
+  let semesterId = catalogs[semesterConfig.default] ? semesterConfig.default : Object.keys(catalogs)[0];
+  let data = catalogs[semesterId] || legacyCatalog;
   const $ = id => document.getElementById(id);
-  const saved = JSON.parse(localStorage.getItem("crossreg-schedule-v2") || "[]");
-  const state = {schedule:saved, matches:[], visible:20};
+  const storageKey = (id=semesterId) => `crossreg-schedule-v3:${id}`;
+  function loadSchedule(id=semesterId) {
+    try {
+      const saved=localStorage.getItem(storageKey(id));
+      if(saved)return JSON.parse(saved);
+      if(id==="2026-fall")return JSON.parse(localStorage.getItem("crossreg-schedule-v2")||"[]");
+    } catch (_) {}
+    return [];
+  }
+  const state = {schedule:loadSchedule(), matches:[], visible:20};
   const days = ["M","T","W","R","F"], dayNames={M:"Mon",T:"Tue",W:"Wed",R:"Thu",F:"Fri"};
   const mins = time => {const [h,m]=time.split(":").map(Number);return h*60+m};
   const clock = time => {const [h,m]=time.split(":").map(Number);return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`};
@@ -35,8 +48,21 @@
     return plans.every(p=>p.length)?plans[0][0]:null;
   }
 
+  function renderSemesterTabs() {
+    $("semesterTabs").innerHTML=semesterConfig.available.filter(semester=>catalogs[semester.id]).map(semester=>`<button class="semester-tab" type="button" role="tab" data-semester="${semester.id}" aria-selected="${semester.id===semesterId}">${semester.label}</button>`).join("");
+  }
+  function updateCatalogNote() {
+    $("dataNote").textContent=`${data.meta.term||"Current term"} catalog updated ${data.meta.updated||"recently"} · ${data.wellesley.length.toLocaleString()} Wellesley sections · ${data.mit.length.toLocaleString()} scheduled MIT subjects`;
+  }
+  function switchSemester(nextId) {
+    if(nextId===semesterId||!catalogs[nextId])return;
+    semesterId=nextId;data=catalogs[semesterId];state.schedule=loadSchedule();state.matches=[];state.visible=20;
+    $("wellesleySearch").value="";$("suggestions").hidden=true;$("clearQuery").hidden=true;$("resultsSection").hidden=true;$("blockForm").hidden=true;
+    renderSemesterTabs();updateCatalogNote();saveAndRender();
+  }
+
   function saveAndRender() {
-    localStorage.setItem("crossreg-schedule-v2",JSON.stringify(state.schedule));
+    localStorage.setItem(storageKey(),JSON.stringify(state.schedule));
     $("clearSchedule").hidden=!state.schedule.length;
     $("selectedCourses").innerHTML=state.schedule.length?state.schedule.map(item=>`<div class="course-chip"><div><strong>${item.code||item.title} · ${item.title}</strong><small>${item.location} · ${item.meetings.map(meetingText).join(" · ")}</small></div><button data-remove="${item.id}" aria-label="Remove ${item.title}">×</button></div>`).join(""):`<div class="empty-state"><b>W</b><p>Your courses and time blocks will appear here.</p></div>`;
     renderCalendar();
@@ -63,7 +89,7 @@
     state.matches=data.mit.map(course=>{const groups=fitGroups(course);if(groups.some(g=>!g.options.length))return null;return {...course,fitGroups:groups,shuttle:shuttle(groups)}}).filter(Boolean).filter(c=>(!q||`${c.code} ${c.title} ${c.description||""}`.toLowerCase().includes(q))&&(!level||c.level===level)&&(!minRating||(c.rating&&c.rating>=minRating))&&(!needBus||c.shuttle));state.visible=20;renderResults();$("resultsSection").hidden=false;$("resultsSection").scrollIntoView({behavior:"smooth"});
   }
   function renderResults() {
-    $("resultsTitle").textContent=`${state.matches.length.toLocaleString()} MIT courses fit`;$("resultsSummary").textContent=`Checked against ${state.schedule.length} schedule item${state.schedule.length===1?"":"s"}`;
+    $("resultsTitle").textContent=`${state.matches.length.toLocaleString()} MIT courses fit`;$("resultsSummary").textContent=`${data.meta.term||"Current term"} · Checked against ${state.schedule.length} schedule item${state.schedule.length===1?"":"s"}`;
     $("results").innerHTML=state.matches.slice(0,state.visible).map(c=>{
       const already=state.schedule.some(i=>i.kind==="mit"&&i.code===c.code);
       const meetings=c.fitGroups.flatMap(g=>g.options.slice(0,2).map(o=>`<span class="meeting">${cleanText(g.type)}: ${meetingText(o)}</span>`)).join("");
@@ -87,5 +113,6 @@
   $("addBlockButton").onclick=()=>{$("blockForm").hidden=false;$("blockName").focus()};$("cancelBlock").onclick=()=>{$("blockForm").hidden=true};
   $("blockForm").addEventListener("submit",e=>{e.preventDefault();const selected=[...document.querySelectorAll("#blockDays input:checked")].map(i=>i.value),start=$("blockStart").value,end=$("blockEnd").value;if(!selected.length||!start||!end||mins(end)<=mins(start)){alert("Choose at least one day and an end time after the start time.");return}state.schedule.push({id:`block-${Date.now()}`,kind:"block",location:$("blockLocation").value,title:$("blockName").value.trim(),meetings:[{days:selected,start,end}]});e.target.reset();e.target.hidden=true;saveAndRender()});
   $("clearSchedule").onclick=()=>{state.schedule=[];saveAndRender()};$("clearQuery").onclick=()=>{$("wellesleySearch").value="";$("suggestions").hidden=true;$("clearQuery").hidden=true};$("findMatches").onclick=findMatches;$("showMore").onclick=()=>{state.visible+=20;renderResults()};$("ratingFilter").addEventListener("input",e=>{$("ratingValue").textContent=+e.target.value?`${(+e.target.value).toFixed(1)}+ / 7`:"Any"});document.addEventListener("click",e=>{if(!e.target.closest(".course-search-wrap"))$("suggestions").hidden=true});
-  $("termLabel").textContent=data.meta.term||"Current term";$("dataNote").textContent=`Catalog updated ${data.meta.updated||"recently"} · ${data.wellesley.length.toLocaleString()} Wellesley sections · ${data.mit.length.toLocaleString()} scheduled MIT subjects`;saveAndRender();
+  $("semesterTabs").addEventListener("click",e=>{const button=e.target.closest("[data-semester]");if(button)switchSemester(button.dataset.semester)});
+  renderSemesterTabs();updateCatalogNote();saveAndRender();
 })();
